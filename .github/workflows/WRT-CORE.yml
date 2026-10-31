@@ -138,6 +138,20 @@ jobs:
           if [ -f "$PROJECT_MIRRORS_FILE" ]; then
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
+      
+      - name: Set RE-CS-07 HLOS Size
+        run: |
+          cd ./wrt/
+          FILE="target/linux/qualcommax/image/ipq60xx.mk"
+
+          # 确认设备定义存在
+          grep -n -A10 'define Device/jdcloud_re-cs-07' "$FILE"
+
+          # 将 RE-CS-07 的内核分区限制从 6M 改为 12M
+          sed -i '/define Device\/jdcloud_re-cs-07/,/^endef/ s/KERNEL_SIZE := 6144k/KERNEL_SIZE := 12288k/' "$FILE"
+
+          # 验证修改结果，失败则停止工作流
+          grep -A10 'define Device/jdcloud_re-cs-07' "$FILE" | grep 'KERNEL_SIZE := 12288k'
 
       - name: Check Scripts
         run: |
