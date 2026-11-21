@@ -36,8 +36,13 @@ case "${1:-}" in
 	firmware)
 		kernels=(build_dir/target-*/linux-*/linux-*/.config)
 		manifests=(bin/targets/*/*/*.manifest)
-		if (( ${#kernels[@]} != 1 || ${#manifests[@]} == 0 )); then
-			echo 'Expected one built kernel and at least one firmware manifest for Honk.' >&2
+		profiles=(bin/targets/*/*/profiles.json)
+		if (( ${#kernels[@]} != 1 || ${#manifests[@]} == 0 || ${#profiles[@]} != 1 )); then
+			echo 'Expected a built kernel, firmware manifests, and profiles.json for Honk.' >&2
+			exit 1
+		fi
+		if ! jq -e '[.profiles[].images[]] | length > 0' "${profiles[0]}" > /dev/null; then
+			echo 'Honk firmware build produced no device images.' >&2
 			exit 1
 		fi
 		require_config "${kernels[0]}" BPF BPF_SYSCALL BPF_JIT CGROUP_BPF NET_SCHED \
