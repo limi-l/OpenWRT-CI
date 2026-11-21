@@ -64,7 +64,7 @@ Config——自定义配置
 
 固件包含 Honk、内嵌的 Doona 界面和 LuCI 管理页。首次启动前，在 LuCI 的 **服务 → Honk** 编辑 `/etc/honk/config.dae`，按实际网络填写接口、节点和路由规则，然后启动服务。Honk 默认关闭开机自启。
 
-IPQ60XX 将本次内核生成的 BTF 安装在根文件系统的 `/usr/lib/debug/boot/vmlinux`，以适应设备的内核分区大小。
+IPQ60XX 将本次内核生成的 BTF 安装在根文件系统的 `/usr/lib/debug/boot/vmlinux`，以适应设备的内核分区大小。Linksys MR7350 的 Honk 固件移除 HomeProxy 和 sing-box，为镜像留出空间。
 
 ## Star History
 

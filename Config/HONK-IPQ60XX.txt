@@ -1,0 +1,5 @@
+# CONFIG_KERNEL_DEBUG_INFO_BTF is not set
+# CONFIG_KERNEL_FTRACE is not set
+CONFIG_PACKAGE_vmlinux-btf=y
+# Leave room for Honk in the MR7350 firmware partition.
+CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_linksys_mr7350="-luci-app-homeproxy -sing-box"

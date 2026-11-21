@@ -209,7 +209,7 @@ jobs:
           if [[ '${{ inputs.WRT_HONK }}' == true ]]; then
             cat "$GITHUB_WORKSPACE/Config/HONK.txt" >> .config
             if [[ "$WRT_HONK_BTF" == detached ]]; then
-              printf '# CONFIG_KERNEL_DEBUG_INFO_BTF is not set\n# CONFIG_KERNEL_FTRACE is not set\nCONFIG_PACKAGE_vmlinux-btf=y\n' >> .config
+              cat "$GITHUB_WORKSPACE/Config/HONK-IPQ60XX.txt" >> .config
             else
               cat "$GITHUB_WORKSPACE/Config/HONK-BTF.txt" >> .config
             fi

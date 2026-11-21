@@ -53,6 +53,10 @@ case "${1:-}" in
 			echo 'Honk firmware build produced no device images.' >&2
 			exit 1
 		fi
+		if ! jq -e '[.profiles[].images[] | select(.size != null and .size <= 256)] | length == 0' "${profiles[0]}" > /dev/null; then
+			echo 'The build produced an incomplete firmware image. Check the image size warnings.' >&2
+			exit 1
+		fi
 		require_config "${kernels[0]}" BPF BPF_SYSCALL BPF_JIT CGROUP_BPF NET_SCHED \
 			NET_CLS_ACT NET_XGRESS NET_NS
 		if [[ "$btf_package" == vmlinux-btf ]]; then
