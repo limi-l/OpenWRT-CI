@@ -20,6 +20,16 @@ case "${1:-}" in
 			aarch64|x86_64) ;;
 			*) echo 'Honk requires an aarch64 or x86_64 target.' >&2; exit 1 ;;
 		esac
+		board=$(sed -n 's/^CONFIG_TARGET_BOARD="\([^"]*\)"$/\1/p' .config)
+		subtarget=$(sed -n 's/^CONFIG_TARGET_SUBTARGET="\([^"]*\)"$/\1/p' .config)
+		kernel_version=$(awk -v target="$board/$subtarget" '
+			$1 == "Target:" { selected = ($2 == target) }
+			selected && $1 == "Linux-Version:" { print $2; exit }
+		' tmp/.targetinfo)
+		if [[ -z "$kernel_version" || $(printf '6.12\n%s\n' "$kernel_version" | sort -V | head -n1) != 6.12 ]]; then
+			echo "Honk requires Linux 6.12 or later (selected: ${kernel_version:-unknown})." >&2
+			exit 1
+		fi
 		require_config .config PACKAGE_honk PACKAGE_luci-app-honk PACKAGE_vmlinux-btf-builtin \
 			KERNEL_DEBUG_INFO_BTF KERNEL_CGROUP_BPF KERNEL_NET_NS
 		;;
@@ -32,6 +42,10 @@ case "${1:-}" in
 		fi
 		require_config "${kernels[0]}" BPF BPF_SYSCALL BPF_JIT CGROUP_BPF NET_SCHED \
 			NET_CLS_ACT NET_XGRESS NET_NS DEBUG_INFO_BTF
+		if ! readelf -SW "${kernels[0]%/.config}/vmlinux" | awk '$0 ~ /[[:space:]]\.BTF[[:space:]]/ { found = 1 } END { exit !found }'; then
+			echo 'The built kernel is missing its .BTF section.' >&2
+			exit 1
+		fi
 		for manifest in "${manifests[@]}"; do
 			for package in honk luci-app-honk vmlinux-btf-builtin kmod-nft-queue kmod-nfnetlink-queue; do
 				if ! grep -q "^$package - " "$manifest"; then
