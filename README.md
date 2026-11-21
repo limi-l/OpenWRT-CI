@@ -64,6 +64,10 @@ Config——自定义配置
 
 固件包含 Honk、内嵌的 Doona 界面和 LuCI 管理页。首次启动前，在 LuCI 的 **服务 → Honk** 编辑 `/etc/honk/config.dae`，按实际网络填写接口、节点和路由规则，然后启动服务。Honk 默认关闭开机自启。
 
+默认由本机 dnsmasq 解析 `.lan`，公网 DNS 通过阿里公共 DNS 的 DoH 地址 `https://223.5.5.5/dns-query` 直连。若 LAN 使用其他域名后缀，请修改 `dns.routing.request` 中的 `qname` 规则。升级时，旧版原始模板会自动更新，手动编辑过的文件和 Doona 数据库保持原样。旧自定义配置如遇公网查询超时，可参照 `/rom/etc/honk/config.dae` 更新 DNS 上游和规则。
+
+Clash 或 Mihomo 订阅中需要 `disable-sni: true` 的节点会被 Honk 跳过。请使用服务端支持发送 SNI 的节点，并保留服务商提供的 `sni` 或 `servername`。
+
 IPQ60XX 将本次内核生成的 BTF 安装在根文件系统的 `/usr/lib/debug/boot/vmlinux`，以适应设备的内核分区大小。Linksys MR7350 的 Honk 固件移除 HomeProxy 和 sing-box，为镜像留出空间。
 
 ## Star History

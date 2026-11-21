@@ -1,0 +1,62 @@
+--- a/Makefile
++++ b/Makefile
+@@ -40,7 +40,7 @@
+ 
+ PKG_NAME:=honk
+ PKG_VERSION:=$(if $(HONK_VERSION),$(HONK_VERSION),0.1.0_beta6)
+-PKG_RELEASE:=2
++PKG_RELEASE:=3
+ 
+ # Upstream release the sources are checked out from. honk's build script derives
+ # the version it embeds from the tag in GITHUB_REF, so build.sh exports it.
+@@ -67,7 +67,7 @@
+   # Its BTF comes from vmlinux-btf, as for dae. The geo packages ship the dat
+   # files; this package links them into /usr/share/honk, which honk searches
+   # before the dae locations.
+-  DEPENDS:=+libstdcpp +kmod-veth +kmod-sched-core +kmod-sched-bpf \
++  DEPENDS:=+libstdcpp +ca-bundle +kmod-veth +kmod-sched-core +kmod-sched-bpf \
+            +kmod-nft-core +kmod-nft-queue +kmod-nfnetlink-queue \
+            +kmod-nf-conntrack +vmlinux-btf +v2ray-geoip +v2ray-geosite
+ endef
+@@ -140,6 +140,7 @@
+ 	$(INSTALL_CONF) $(PKG_DIR)/files/honk.config $(1)/etc/config/honk
+ 	$(INSTALL_DIR) $(1)/etc/uci-defaults
+ 	$(INSTALL_BIN) $(PKG_DIR)/files/honk.uci-defaults $(1)/etc/uci-defaults/90-honk-autostart
++	$(INSTALL_BIN) $(PKG_DIR)/files/honk-dns.uci-defaults $(1)/etc/uci-defaults/91-honk-dns
+ 	$(INSTALL_DIR) $(1)/etc/honk
+ 	$(INSTALL_CONF) $(PKG_DIR)/files/config.dae $(1)/etc/honk/config.dae
+ 	$(INSTALL_DIR) $(1)/lib/upgrade/keep.d
+--- a/files/config.dae
++++ b/files/config.dae
+@@ -40,12 +40,16 @@
+ 
+ dns {
+     upstream {
+-        # dnsmasq on the router; honk sends its own DNS lookups there.
+-        local: 'udp://127.0.0.1:53'
++        # Keep DHCP/local names in dnsmasq. Public queries use an independent
++        # upstream so interception of dnsmasq's WAN queries cannot loop.
++        local: 'udp://127.0.0.1:53' -> direct
++        public_doh: 'https://223.5.5.5/dns-query' -> direct
+     }
+     routing {
+         request {
+-            fallback: local
++            # Change this suffix if dnsmasq uses a different LAN domain.
++            qname(suffix: lan) -> local
++            fallback: public_doh
+         }
+         response {
+             # accept the answer; naming an upstream here re-queries it, and
+@@ -56,9 +60,8 @@
+ }
+ 
+ routing {
+-    # dnsmasq is the local DNS upstream. Its own queries leave through the WAN
+-    # hook; without this rule honk would intercept them and send them back to
+-    # dnsmasq, a loop that times out every lookup.
++    # Let dnsmasq reach its configured upstreams through the WAN hook.
++    # If process matching is unavailable, public DNS still has its own path.
+     pname(dnsmasq) -> direct(must)
+ 
+     # Start with everything direct; add proxy groups and rules above this

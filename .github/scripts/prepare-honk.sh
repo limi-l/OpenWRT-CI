@@ -17,9 +17,13 @@ if [[ "${WRT_HONK_BTF:-embedded}" != detached ]]; then
 fi
 git -C "$feed_dir" archive FETCH_HEAD "${packages[@]}" | tar -x -C "$package_dir"
 
+script_dir=$(dirname "$0")
+patch --batch --forward --fuzz=0 -d "$package_dir/honk" -p1 < "$script_dir/honk-default-dns.patch"
+install -m 644 "$script_dir/honk-dns.uci-defaults" "$package_dir/honk/files/honk-dns.uci-defaults"
+
 if [[ "${WRT_HONK_BTF:-embedded}" == detached ]]; then
 	# Generate BTF from this build's vmlinux and keep it out of the boot partition.
-	install -D -m 644 "$(dirname "$0")/vmlinux-btf.mk" "$package_dir/vmlinux-btf/Makefile"
+	install -D -m 644 "$script_dir/vmlinux-btf.mk" "$package_dir/vmlinux-btf/Makefile"
 else
 	# Match the dependency to the provider when the kernel exports its own BTF.
 	sed -i 's/+vmlinux-btf /+vmlinux-btf-builtin /' "$package_dir/honk/Makefile"

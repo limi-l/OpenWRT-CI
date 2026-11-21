@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# A settings backup may restore the previous firmware's unedited config.
+# Update that template while preserving custom files and Doona's DB store.
+config=/etc/honk/config.dae
+defaults=/rom/etc/honk/config.dae
+old_hash=a15871c947473ae648031e775f2f5e426f3e16bd30cf25546e7d421d1ec509cc
+
+[ "$(uci -q get honk.config.store)" != db ] || exit 0
+config_file=$(uci -q get honk.config.config_file)
+[ "${config_file:-$config}" = "$config" ] || exit 0
+[ -f "$config" ] && [ -r "$defaults" ] || exit 0
+current=$(sha256sum < "$config") || exit 1
+[ "${current%% *}" = "$old_hash" ] || exit 0
+grep -Fq 'fallback: public_doh' "$defaults" || exit 0
+
+temporary=$(mktemp "${config}.XXXXXX") || exit 1
+trap 'rm -f "$temporary"' EXIT
+cat "$defaults" > "$temporary" && mv -f "$temporary" "$config" || exit 1
+logger -t honk 'Updated the previous default DNS configuration'
+exit 0

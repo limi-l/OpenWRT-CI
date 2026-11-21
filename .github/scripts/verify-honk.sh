@@ -35,7 +35,7 @@ case "${1:-}" in
 			echo "Honk requires Linux 6.12 or later (selected: ${kernel_version:-unknown})." >&2
 			exit 1
 		fi
-		require_config .config PACKAGE_honk PACKAGE_luci-app-honk "PACKAGE_$btf_package" \
+		require_config .config PACKAGE_honk PACKAGE_luci-app-honk PACKAGE_ca-bundle "PACKAGE_$btf_package" \
 			KERNEL_DEBUG_INFO KERNEL_CGROUP_BPF KERNEL_NET_NS
 		if [[ "$btf_package" == vmlinux-btf-builtin ]]; then
 			require_config .config KERNEL_DEBUG_INFO_BTF
@@ -73,7 +73,7 @@ case "${1:-}" in
 			fi
 		fi
 		for manifest in "${manifests[@]}"; do
-			for package in honk luci-app-honk "$btf_package" kmod-nft-queue kmod-nfnetlink-queue; do
+			for package in honk luci-app-honk ca-bundle "$btf_package" kmod-nft-queue kmod-nfnetlink-queue; do
 				if ! grep -q "^$package - " "$manifest"; then
 					echo "Honk requires $package in $manifest" >&2
 					exit 1
