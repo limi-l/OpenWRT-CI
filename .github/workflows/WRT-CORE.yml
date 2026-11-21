@@ -40,6 +40,9 @@ on:
       WRT_PACKAGE:
         required: false
         type: string
+      WRT_HONK:
+        default: false
+        type: boolean
       WRT_TEST:
         required: false
         default: false
@@ -180,6 +183,11 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Handles.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-i2c-tools.sh
 
+      - name: Add Honk packages
+        if: ${{ inputs.WRT_HONK }}
+        working-directory: ./wrt
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/prepare-honk.sh"
+
       - name: Custom Settings
         run: |
           cd ./wrt/
@@ -193,7 +201,14 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Settings.sh
           $GITHUB_WORKSPACE/.github/scripts/prepare-build-host.sh
 
-          make defconfig -j$(nproc) && make clean -j$(nproc)
+          if [[ '${{ inputs.WRT_HONK }}' == true ]]; then
+            cat "$GITHUB_WORKSPACE/Config/HONK.txt" >> .config
+          fi
+          make defconfig -j$(nproc)
+          if [[ '${{ inputs.WRT_HONK }}' == true ]]; then
+            bash "$GITHUB_WORKSPACE/.github/scripts/verify-honk.sh" config
+          fi
+          make clean -j$(nproc)
 
       - name: Prepare Rust Toolchain
         if: ${{ !inputs.WRT_TEST }}
@@ -201,6 +216,11 @@ jobs:
           cd ./wrt/
 
           $GITHUB_WORKSPACE/.github/scripts/prepare-rust.sh
+
+      - name: Prepare Honk toolchain
+        if: ${{ inputs.WRT_HONK && !inputs.WRT_TEST }}
+        working-directory: ./wrt
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/prepare-honk-toolchain.sh"
 
       - name: Download Packages
         if: ${{ !inputs.WRT_TEST }}
@@ -217,6 +237,11 @@ jobs:
           mkdir -p $GITHUB_WORKSPACE/build-reports
           make -j$(nproc) BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/parallel.tsv" || \
             make -j1 V=s BUILD_TIME_LOG="$GITHUB_WORKSPACE/build-reports/serial.tsv"
+
+      - name: Verify Honk in firmware
+        if: ${{ inputs.WRT_HONK && !inputs.WRT_TEST }}
+        working-directory: ./wrt
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/verify-honk.sh" firmware
 
       - name: Collect Build Reports
         if: ${{ !inputs.WRT_TEST && always() }}
@@ -282,6 +307,7 @@ jobs:
           fi
 
       - name: Release Firmware
+        if: ${{ !inputs.WRT_HONK }}
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
@@ -308,6 +334,14 @@ jobs:
 
             内核版本：${{env.WRT_KVER}}
             插件列表：${{env.WRT_LIST}}
+
+      - name: Upload Honk build
+        if: ${{ inputs.WRT_HONK }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: honk-${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{github.run_attempt}}
+          path: ./wrt/upload/
+          if-no-files-found: error
 
   cache-rollover:
     name: Roll cache generations

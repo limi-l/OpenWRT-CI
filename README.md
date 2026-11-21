@@ -58,6 +58,12 @@ Scripts——自定义脚本
 
 Config——自定义配置
 
+## 编译 Honk 固件
+
+在 **Actions → WRT-TEST → Run workflow** 中选择设备对应的 `CONFIG`、`SOURCE` 和 `BRANCH`，勾选 `HONK` 并取消勾选 `TEST`。需要 ARM64 或 x86_64，以及 Linux 6.12 或更新版本。构建成功后，从该次运行的 **Artifacts** 下载 `honk-…`，按设备型号选择镜像。开启 `TEST` 时只生成配置文件。
+
+固件包含 Honk、内嵌的 Doona 界面和 LuCI 管理页。首次启动前，在 LuCI 的 **服务 → Honk** 编辑 `/etc/honk/config.dae`，按实际网络填写接口、节点和路由规则，然后启动服务。Honk 默认关闭开机自启。
+
 ## Star History
 
 <a href="https://www.star-history.com/?repos=vikingyfy%2Fopenwrt-ci&type=date&legend=top-left">

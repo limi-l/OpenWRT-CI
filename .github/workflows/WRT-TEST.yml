@@ -41,6 +41,10 @@ on:
       PACKAGE:
         required: false
         type: string
+      HONK:
+        description: '将 Honk 和 LuCI 管理界面编入固件（Linux 6.12+，ARM64 或 x86_64）。'
+        default: false
+        type: boolean
       TEST:
         description: '仅输出配置文件，不编译固件。'
         default: true
@@ -79,5 +83,6 @@ jobs:
       WRT_SOURCE: ${{inputs.SOURCE}}
       #插件调整
       WRT_PACKAGE: ${{inputs.PACKAGE}}
+      WRT_HONK: ${{inputs.HONK}}
       #仅输出配置文件
       WRT_TEST: ${{inputs.TEST || false}}
