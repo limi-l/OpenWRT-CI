@@ -19,7 +19,7 @@ endef
 
 define Build/Compile
 	pahole --btf_encode_detached="$(PKG_BUILD_DIR)/vmlinux" "$(LINUX_DIR)/vmlinux"
-	test "$$(od -An -tx1 -N2 '$(PKG_BUILD_DIR)/vmlinux' | tr -d ' \n')" = 9feb
+	od -An -tx1 -N2 "$(PKG_BUILD_DIR)/vmlinux" | tr -d ' \n' | grep -Fxq 9feb
 endef
 
 define Package/vmlinux-btf/install

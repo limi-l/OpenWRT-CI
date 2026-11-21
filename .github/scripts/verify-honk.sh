@@ -56,7 +56,7 @@ case "${1:-}" in
 		require_config "${kernels[0]}" BPF BPF_SYSCALL BPF_JIT CGROUP_BPF NET_SCHED \
 			NET_CLS_ACT NET_XGRESS NET_NS
 		if [[ "$btf_package" == vmlinux-btf ]]; then
-			blobs=(build_dir/target-*/vmlinux-btf-*/vmlinux)
+			blobs=(build_dir/target-*/linux-*/vmlinux-btf-*/vmlinux)
 			if (( ${#blobs[@]} != 1 )) || [[ $(od -An -tx1 -N2 "${blobs[0]}" | tr -d ' \n') != 9feb ]]; then
 				echo 'The generated detached kernel BTF is missing or invalid.' >&2
 				exit 1
