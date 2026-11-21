@@ -3,6 +3,11 @@
 set -euo pipefail
 shopt -s nullglob
 
+btf_package=vmlinux-btf-builtin
+if [[ "${WRT_HONK_BTF:-embedded}" == detached ]]; then
+	btf_package=vmlinux-btf
+fi
+
 require_config() {
 	local file=$1 symbol
 	shift
@@ -30,8 +35,11 @@ case "${1:-}" in
 			echo "Honk requires Linux 6.12 or later (selected: ${kernel_version:-unknown})." >&2
 			exit 1
 		fi
-		require_config .config PACKAGE_honk PACKAGE_luci-app-honk PACKAGE_vmlinux-btf-builtin \
-			KERNEL_DEBUG_INFO_BTF KERNEL_CGROUP_BPF KERNEL_NET_NS
+		require_config .config PACKAGE_honk PACKAGE_luci-app-honk "PACKAGE_$btf_package" \
+			KERNEL_DEBUG_INFO KERNEL_CGROUP_BPF KERNEL_NET_NS
+		if [[ "$btf_package" == vmlinux-btf-builtin ]]; then
+			require_config .config KERNEL_DEBUG_INFO_BTF
+		fi
 		;;
 	firmware)
 		kernels=(build_dir/target-*/linux-*/linux-*/.config)
@@ -46,13 +54,22 @@ case "${1:-}" in
 			exit 1
 		fi
 		require_config "${kernels[0]}" BPF BPF_SYSCALL BPF_JIT CGROUP_BPF NET_SCHED \
-			NET_CLS_ACT NET_XGRESS NET_NS DEBUG_INFO_BTF
-		if ! readelf -SW "${kernels[0]%/.config}/vmlinux" | awk '$0 ~ /[[:space:]]\.BTF[[:space:]]/ { found = 1 } END { exit !found }'; then
-			echo 'The built kernel is missing its .BTF section.' >&2
-			exit 1
+			NET_CLS_ACT NET_XGRESS NET_NS
+		if [[ "$btf_package" == vmlinux-btf ]]; then
+			blobs=(build_dir/target-*/vmlinux-btf-*/vmlinux)
+			if (( ${#blobs[@]} != 1 )) || [[ $(od -An -tx1 -N2 "${blobs[0]}" | tr -d ' \n') != 9feb ]]; then
+				echo 'The generated detached kernel BTF is missing or invalid.' >&2
+				exit 1
+			fi
+		else
+			require_config "${kernels[0]}" DEBUG_INFO_BTF
+			if ! readelf -SW "${kernels[0]%/.config}/vmlinux" | awk '$0 ~ /[[:space:]]\.BTF[[:space:]]/ { found = 1 } END { exit !found }'; then
+				echo 'The built kernel is missing its .BTF section.' >&2
+				exit 1
+			fi
 		fi
 		for manifest in "${manifests[@]}"; do
-			for package in honk luci-app-honk vmlinux-btf-builtin kmod-nft-queue kmod-nfnetlink-queue; do
+			for package in honk luci-app-honk "$btf_package" kmod-nft-queue kmod-nfnetlink-queue; do
 				if ! grep -q "^$package - " "$manifest"; then
 					echo "Honk requires $package in $manifest" >&2
 					exit 1

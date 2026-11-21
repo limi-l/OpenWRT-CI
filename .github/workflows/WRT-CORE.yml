@@ -120,6 +120,11 @@ jobs:
             echo "WRT_SUBTARGET=$WRT_SUBTARGET"
             echo "WRT_TARGET=$WRT_TARGET"
             echo "WRT_WIFI=$WRT_WIFI"
+            if [[ "$WRT_CACHE_TARGET" == qualcommax-ipq60xx ]]; then
+              echo "WRT_HONK_BTF=detached"
+            else
+              echo "WRT_HONK_BTF=embedded"
+            fi
             echo "WRT_KVER=none"
             echo "WRT_LIST=none"
           } >> "$GITHUB_ENV"
@@ -203,6 +208,11 @@ jobs:
 
           if [[ '${{ inputs.WRT_HONK }}' == true ]]; then
             cat "$GITHUB_WORKSPACE/Config/HONK.txt" >> .config
+            if [[ "$WRT_HONK_BTF" == detached ]]; then
+              printf '# CONFIG_KERNEL_DEBUG_INFO_BTF is not set\n# CONFIG_KERNEL_FTRACE is not set\nCONFIG_PACKAGE_vmlinux-btf=y\n' >> .config
+            else
+              cat "$GITHUB_WORKSPACE/Config/HONK-BTF.txt" >> .config
+            fi
           fi
           make defconfig -j$(nproc)
           if [[ '${{ inputs.WRT_HONK }}' == true ]]; then
@@ -220,7 +230,11 @@ jobs:
       - name: Prepare Honk toolchain
         if: ${{ inputs.WRT_HONK && !inputs.WRT_TEST }}
         working-directory: ./wrt
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/prepare-honk-toolchain.sh"
+        run: |
+          if [[ "$WRT_HONK_BTF" == detached ]]; then
+            sudo apt-get install -y --no-install-recommends pahole
+          fi
+          bash "$GITHUB_WORKSPACE/.github/scripts/prepare-honk-toolchain.sh"
 
       - name: Download Packages
         if: ${{ !inputs.WRT_TEST }}

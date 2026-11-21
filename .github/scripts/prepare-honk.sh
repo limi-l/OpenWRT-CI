@@ -11,11 +11,19 @@ trap 'rm -rf -- "$feed_dir"' EXIT
 git init -q "$feed_dir"
 git -C "$feed_dir" fetch --depth=1 https://github.com/daeuniverse/openwrt-packages.git "$feed_commit"
 mkdir -p "$package_dir"
-git -C "$feed_dir" archive FETCH_HEAD honk luci-app-honk luci-lib-daeuniverse vmlinux-btf-builtin |
-	tar -x -C "$package_dir"
+packages=(honk luci-app-honk luci-lib-daeuniverse)
+if [[ "${WRT_HONK_BTF:-embedded}" != detached ]]; then
+	packages+=(vmlinux-btf-builtin)
+fi
+git -C "$feed_dir" archive FETCH_HEAD "${packages[@]}" | tar -x -C "$package_dir"
 
-# This firmware supplies its own BTF, so explicitly select the built-in provider.
-sed -i 's/+vmlinux-btf /+vmlinux-btf-builtin /' "$package_dir/honk/Makefile"
+if [[ "${WRT_HONK_BTF:-embedded}" == detached ]]; then
+	# Generate BTF from this build's vmlinux and keep it out of the boot partition.
+	install -D -m 644 "$(dirname "$0")/vmlinux-btf.mk" "$package_dir/vmlinux-btf/Makefile"
+else
+	# Match the dependency to the provider when the kernel exports its own BTF.
+	sed -i 's/+vmlinux-btf /+vmlinux-btf-builtin /' "$package_dir/honk/Makefile"
+fi
 
 source_dir="$package_dir/honk/src"
 git init -q "$source_dir"
